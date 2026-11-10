@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - ReseñaPro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #f4f6f9; color: #333; }
+
+        #loginScreen { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .login-box { background: white; padding: 3rem; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center; width: 90%; max-width: 400px; }
+        .login-box h2 { color: #667eea; margin-bottom: 1.5rem; }
+        .login-box input { width: 100%; padding: 1rem; margin-bottom: 1rem; border: 2px solid #ddd; border-radius: 10px; font-size: 1rem; }
+        .login-box button { width: 100%; padding: 1rem; background: #667eea; color: white; border: none; border-radius: 10px; font-size: 1.1rem; cursor: pointer; }
+
+        #dashboard { display: none; min-height: 100vh; }
+        .sidebar { width: 250px; background: #2d3748; color: white; position: fixed; height: 100vh; padding: 2rem 1rem; }
+        .sidebar h3 { color: #667eea; margin-bottom: 2rem; text-align: center; }
+        .menu-item { padding: 1rem; margin-bottom: 0.5rem; border-radius: 10px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 10px; }
+        .menu-item:hover, .menu-item.active { background: #667eea; }
+        
+        .main-content { margin-left: 250px; padding: 2rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); border-left: 5px solid #667eea; }
+        .stat-card h4 { color: #888; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .stat-card .number { font-size: 2rem; font-weight: bold; color: #333; }
+
+        .section { display: none; background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .section.active { display: block; }
+        .section h2 { color: #667eea; margin-bottom: 1.5rem; border-bottom: 2px solid #f0f0f0; padding-bottom: 0.5rem; }
+
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+        .form-group input { width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; }
+        
+        .drop-zone { border: 2px dashed #667eea; border-radius: 10px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: #f8f9ff; }
+        .drop-zone:hover, .drop-zone.dragover { background: #eef2ff; border-color: #4c51bf; }
+        .drop-zone p { color: #666; margin-bottom: 0.5rem; }
+        .drop-zone .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        #previewImg { max-width: 150px; max-height: 150px; margin-top: 1rem; border-radius: 10px; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .upload-status { margin-top: 10px; font-size: 0.9rem; color: #667eea; font-weight: bold; }
+
+        .btn-save { background: #667eea; color: white; padding: 1rem 2rem; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem; margin-top: 1rem; }
+        .btn-save:disabled { background: #ccc; cursor: not-allowed; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #666; }
+        .badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+        .badge-good { background: #d4edda; color: #155724; }
+        .badge-bad { background: #f8d7da; color: #721c24; }
+
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .main-content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="login-box">
+            <h2>🔒 Acceso Negocio</h2>
+            <input type="password" id="adminPass" placeholder="Clave (prueba: 1234)">
+            <button onclick="checkLogin()">Entrar</button>
+            <p id="loginError" style="color: red; margin-top: 1rem; display: none;">Clave incorrecta</p>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <div class="sidebar">
+            <h3>🚀 ReseñaPro</h3>
+            <div class="menu-item active" onclick="showSection('resumen', this)">📊 Resumen</div>
+            <div class="menu-item" onclick="showSection('config', this)">⚙️ Configuración</div>
+            <div class="menu-item" onclick="showSection('testimonios', this)">⭐ Testimonios</div>
+            <div class="menu-item" onclick="showSection('quejas', this)">⚠️ Quejas Privadas</div>
+            <div class="menu-item" onclick="logout()" style="margin-top: 2rem; background: #e53e3e;">🚪 Salir</div>
+        </div>
+
+        <div class="main-content">
+            <div id="resumen" class="section active">
+                <h2>📊 Resumen de tu Negocio</h2>
+                <div class="stats-grid">
+                    <div class="stat-card"><h4>Total Reseñas Positivas</h4><div class="number" id="statTotal">0</div></div>
+                    <div class="stat-card" style="border-left-color: #e53e3e;"><h4>Quejas Privadas</h4><div class="number" id="statQuejas">0</div></div>
+                </div>
+            </div>
+
+            <div id="config" class="section">
+                <h2>⚙️ Configuración de tu Página</h2>
+                <div class="form-group"><label>Nombre de tu Negocio:</label><input type="text" id="cfgNombre"></div>
+                <div class="form-group"><label>Link directo de Google Maps:</label><input type="text" id="cfgMaps"></div>
+                <div class="form-group"><label>Tu número de WhatsApp:</label><input type="text" id="cfgWhats"></div>
+                
+                <div class="form-group">
+                    <label>Logo o Imagen de tu negocio:</label>
+                    <div class="drop-zone" id="dropZone">
+                        <div class="icon">📸</div>
+                        <p><strong>Arrastra tu imagen aquí</strong> o haz clic para subir</p>
+                        <input type="file" id="fileInput" accept="image/*" hidden>
+                        <img id="previewImg" src="" alt="Vista previa">
+                        <div id="uploadStatus" class="upload-status"></div>
+                    </div>
+                </div>
+
+                <button class="btn-save" id="btnSave" onclick="guardarConfig()">💾 Guardar Cambios</button>
+            </div>
+
+            <div id="testimonios" class="section">
+                <h2>⭐ Testimonios Guardados</h2>
+                <table><thead><tr><th>Cliente</th><th>Estrellas</th><th>Comentario</th><th>Fecha</th></tr></thead><tbody id="tablaTestimonios"></tbody></table>
+            </div>
+
+            <div id="quejas" class="section">
+                <h2>⚠️ Quejas Privadas</h2>
+                <table><thead><tr><th>Cliente</th><th>Estrellas</th><th>Queja</th><th>Fecha</th></tr></thead><tbody id="tablaQuejas"></tbody></table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-firestore.js";
+
+        const IMGBB_API_KEY = 'd3d7d7a02d9abab6cae32a2ed906bd9a'; 
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA12edp9XR9Qi8lZ6bu6G4Y9FIzECC9G9A",
+            authDomain: "resenapro-2e4ed.firebaseapp.com",
+            projectId: "resenapro-2e4ed",
+            storageBucket: "resenapro-2e4ed.firebasestorage.app",
+            messagingSenderId: "498785912047",
+            appId: "1:498785912047:web:64bbf16fb6d44aff16c71a",
+            measurementId: "G-CZWD7QR28J"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Variable que guardará la URL REAL de ImgBB
+        let imgbbUrlReal = '';
+
+        window.checkLogin = function() {
+            if (document.getElementById('adminPass').value === '1234') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                iniciarEscuchaDatos();
+                cargarConfigActual();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+        window.logout = function() { location.reload(); }
+        window.showSection = function(id, el) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            document.getElementById(id).classList.add('active'); el.classList.add('active');
+        }
+
+        function iniciarEscuchaDatos() {
+            onSnapshot(query(collection(db, "reseñas"), where("rating", ">=", 4)), (snap) => {
+                document.getElementById('statTotal').textContent = snap.size;
+                const tb = document.getElementById('tablaTestimonios'); tb.innerHTML = '';
+                snap.forEach(d => {
+                    const data = d.data();
+                    tb.innerHTML += `<tr><td>${data.nombre}</td><td><span class="badge badge-good">${'⭐'.repeat(data.rating)}</span></td><td>"${data.mensaje}"</td><td>${new Date(data.fecha).toLocaleDateString('es-CL')}</td></tr>`;
+                });
+                if(snap.empty) tb.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Aún no hay testimonios.</td></tr>';
+            });
+
+            onSnapshot(collection(db, "quejas"), (snap) => {
+                document.getElementById('statQuejas').textContent = snap.size;
+                const tb = document.getElementById('tablaQuejas'); tb.innerHTML = '';
+                snap.forEach(d => {
+                    const data = d.data();
+                    tb.innerHTML += `<tr><td>${data.nombre}</td><td><span class="badge badge-bad">${'⭐'.repeat(data.rating)}</span></td><td>"${data.mensaje}"</td><td>${new Date(data.fecha).toLocaleDateString('es-CL')}</td></tr>`;
+                });
+                if(snap.empty) tb.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">¡Genial! No hay quejas.</td></tr>';
+            });
+        }
+
+        async function cargarConfigActual() {
+            const snap = await getDocs(query(collection(db, "configuracion"), where("id", "==", "negocio")));
+            if (!snap.empty) {
+                const c = snap.docs[0].data();
+                document.getElementById('cfgNombre').value = c.nombre || '';
+                document.getElementById('cfgMaps').value = c.googleMapsUrl || '';
+                document.getElementById('cfgWhats').value = c.whatsappNumero || '';
+                
+                // Si ya hay una URL válida de ImgBB, mostrarla
+                if (c.logoUrl && c.logoUrl.startsWith('http')) {
+                    const img = document.getElementById('previewImg');
+                    img.src = c.logoUrl; 
+                    img.style.display = 'block';
+                    imgbbUrlReal = c.logoUrl; // Guardar la URL real
+                    document.getElementById('uploadStatus').textContent = '✅ Imagen ya cargada desde la nube.';
+                } else if (c.logoUrl && c.logoUrl.startsWith('data:')) {
+                    // Hay un base64 viejo guardado - mostrarlo pero marcar que hay que re-subir
+                    const img = document.getElementById('previewImg');
+                    img.src = c.logoUrl; 
+                    img.style.display = 'block';
+                    document.getElementById('uploadStatus').textContent = '⚠️ Imagen antigua (base64). Arrastra una nueva para subirla correctamente.';
+                    imgbbUrlReal = ''; // No usar el base64
+                }
+            }
+        }
+
+        // --- DRAG & DROP ---
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const previewImg = document.getElementById('previewImg');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) procesarImagen(e.dataTransfer.files[0]); });
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length) procesarImagen(e.target.files[0]); });
+
+        // Mostrar preview inmediato y subir a ImgBB automáticamente
+        async function procesarImagen(file) {
+            if (!file.type.startsWith('image/')) return alert('Solo imágenes (JPG, PNG).');
+            
+            // Mostrar preview local inmediatamente
+            const reader = new FileReader();
+            reader.onload = (e) => { 
+                previewImg.src = e.target.result; 
+                previewImg.style.display = 'block'; 
+            };
+            reader.readAsDataURL(file);
+            
+            // Subir a ImgBB automáticamente
+            uploadStatus.textContent = '⏳ Subiendo imagen a la nube...';
+            try {
+                const url = await subirAImgBB(file);
+                imgbbUrlReal = url; // Guardar URL real
+                uploadStatus.textContent = '✅ Imagen subida a la nube. ¡Lista para guardar!';
+            } catch (err) {
+                console.error(err);
+                uploadStatus.textContent = '❌ Error al subir. Revisa tu API Key.';
+            }
+        }
+
+        async function subirAImgBB(file) {
+            const base64 = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+
+            const formData = new FormData();
+            formData.append('image', base64);
+
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            if (data.success) {
+                return data.data.url;
+            } else {
+                throw new Error('Error al subir a ImgBB');
+            }
+        }
+
+        window.guardarConfig = async function() {
+            const btn = document.getElementById('btnSave');
+            btn.disabled = true; btn.textContent = '⏳ Guardando...';
+
+            // Usar la URL real de ImgBB (nunca el base64)
+            const logoUrlFinal = imgbbUrlReal;
+
+            try {
+                await setDoc(doc(db, "configuracion", "negocio"), {
+                    id: "negocio",
+                    nombre: document.getElementById('cfgNombre').value,
+                    googleMapsUrl: document.getElementById('cfgMaps').value,
+                    whatsappNumero: document.getElementById('cfgWhats').value,
+                    logoUrl: logoUrlFinal
+                });
+
+                alert('✅ ¡Configuración guardada! La imagen aparecerá en la página del cliente.');
+            } catch (err) {
+                console.error(err);
+                alert('Error al guardar en Firebase.');
+            }
+            btn.disabled = false; btn.textContent = '💾 Guardar Cambios';
+        }
+    </script>
+</body>
+</html>
